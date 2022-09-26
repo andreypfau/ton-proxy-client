@@ -1,16 +1,15 @@
+import com.github.andreypfau.kotlinio.address.Inet4Address
 import kotlinx.coroutines.runBlocking
 import org.ton.proxy.client.device.VirtualDevice
-import org.ton.proxy.client.utils.bestInterface
-import org.ton.proxy.client.utils.getInterfaces
+import org.ton.proxy.client.handler.NetworkHandler
 
 fun main() = runBlocking {
-    val ifAddr = getInterfaces().bestInterface()
-    getInterfaces().forEach {
-        println(it)
-    }
-    println("best: $ifAddr")
     val virtualDevice = VirtualDevice.createDevice("utun")
-    getInterfaces().forEach {
-        println(it)
-    }
+    val networkHandler = NetworkHandler(
+        Inet4Address("10.8.0.1"),
+        virtualDevice,
+        coroutineContext
+    )
+    networkHandler.printNetworkAddresses()
+    networkHandler.configureRouting()
 }

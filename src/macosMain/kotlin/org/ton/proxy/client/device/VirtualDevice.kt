@@ -1,17 +1,19 @@
 package org.ton.proxy.client.device
 
+import com.github.andreypfau.kotlinio.utils.PosixException
 import kotlinx.cinterop.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import org.ton.proxy.client.utils.check
 import os.File
 import platform.osx.CTLIOCGINFO
 import platform.osx.ctl_info
 import platform.osx.sockaddr_ctl
 import platform.posix.*
-import unix.PosixException
-import unix.check
 import unix.closeOnExec
 import unix.getSockoptString
-import utils.hex
 import kotlin.coroutines.CoroutineContext
 
 actual class VirtualDevice(
@@ -71,12 +73,11 @@ actual class VirtualDevice(
             }.toInt()
             if (n == -1) {
                 if (errno == EINTR) continue
-                else throw PosixException()
+                else throw PosixException(errno)
             }
             if (n < 14) continue
             if (data[3].toUInt().toInt() != RTM_IFINFO) continue
             if (data[12].toUInt() != tunIfIndex) continue
-            println("route: ${data.hex()}")
         }
     }
 
@@ -123,9 +124,6 @@ actual class VirtualDevice(
             println("Created device: $name")
             val ifIndex = if_nametoindex(name)
             device.routeSocket = socketCloseExec(AF_ROUTE, SOCK_RAW, AF_UNSPEC).check()
-            device.launch {
-                device.routeListener(ifIndex)
-            }
             println("Index: $ifIndex")
             device
         } catch (e: Exception) {

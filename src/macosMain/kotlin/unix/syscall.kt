@@ -1,6 +1,7 @@
 package unix
 
 import kotlinx.cinterop.*
+import org.ton.proxy.client.utils.check
 import platform.osx.CTLIOCGINFO
 import platform.osx.ctl_info
 import platform.posix.*

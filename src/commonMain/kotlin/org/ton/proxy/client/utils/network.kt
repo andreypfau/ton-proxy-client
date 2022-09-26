@@ -3,10 +3,8 @@ package org.ton.proxy.client.utils
 import com.github.andreypfau.kotlinio.address.Inet4Address
 import com.github.andreypfau.kotlinio.address.InetAddress
 import com.github.andreypfau.kotlinio.address.InetSocketAddress
-import com.github.andreypfau.kotlinio.address.MacAddress
 import com.github.andreypfau.kotlinio.packet.ip.IpPacket
 import com.github.andreypfau.kotlinio.packet.transport.TransportPacket
-import com.github.andreypfau.kotlinio.utils.decodeHex
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.memScoped
@@ -51,9 +49,4 @@ internal fun systemStr(command: String): String = memScoped {
         stringBuilder.append(str)
     }
     stringBuilder.toString()
-}
-
-internal fun gatewayMacAddress(): MacAddress {
-    val output = systemStr("ip neigh|grep \"\$(ip -4 route list 0/0|cut -d' ' -f3) \"|cut -d' ' -f5|tr '[a-f]' '[A-F]'")
-    return MacAddress(output.replace(":", "").decodeHex())
 }

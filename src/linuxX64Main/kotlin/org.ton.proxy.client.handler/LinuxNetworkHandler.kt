@@ -14,7 +14,7 @@ import com.github.andreypfau.kotlinio.packet.ipv4.IpV4Packet
 import com.github.andreypfau.kotlinio.packet.transport.TransportBuilder
 import kotlinx.coroutines.*
 import org.ton.proxy.client.device.VirtualDevice
-import org.ton.proxy.client.utils.gatewayMacAddress
+import org.ton.proxy.client.utils.systemStr
 import pcap.Pcap
 import pcap.PcapAddressFamily
 import platform.posix.system
@@ -54,7 +54,7 @@ actual class NetworkHandler constructor(
                 val ethernetHeader = EthernetHeader.newInstance(packet, 0)
                 if (ethernetHeader.type != EtherType.IPv4) continue
                 if (ethernetHeader.dstAddress != realMac) continue
-                val ipPacket = IpV4Packet(packet, 0, ethernetHeader.length)
+                val ipPacket = IpV4Packet(packet, ethernetHeader.length, length)
                 launch(this@NetworkHandler.coroutineContext) {
                     ipHandler.handleRemote(ipPacket)
                 }
@@ -120,6 +120,12 @@ actual class NetworkHandler constructor(
             }
         }.build()
         virtualDevice.writePacket(ipPacket.rawData)
+    }
+
+    private fun gatewayMacAddress(): MacAddress {
+        val output =
+            systemStr("/sbin/ip neigh|grep \"\$(/sbin/ip -4 route list 0/0|cut -d' ' -f3) \"|cut -d' ' -f5|tr '[a-f]' '[A-F]'")
+        return MacAddress(output.replace("\n", "").split(':').map { it.toUByte(16) }.toUByteArray().toByteArray())
     }
 
     fun printNetworkAddresses() {

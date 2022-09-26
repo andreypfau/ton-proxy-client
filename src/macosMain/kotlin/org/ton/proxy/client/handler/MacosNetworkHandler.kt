@@ -14,12 +14,13 @@ import com.github.andreypfau.kotlinio.packet.ipv4.IpV4Packet
 import com.github.andreypfau.kotlinio.packet.transport.TransportBuilder
 import kotlinx.coroutines.*
 import org.ton.proxy.client.device.VirtualDevice
-import org.ton.proxy.client.utils.gatewayMacAddress
+import org.ton.proxy.client.utils.systemStr
 import pcap.Pcap
 import pcap.PcapAddressFamily
 import pcap.PcapPromiscousMode
 import platform.posix.system
 import kotlin.coroutines.CoroutineContext
+import kotlin.experimental.xor
 
 actual class NetworkHandler(
     actual val virtualAddress: Inet4Address,
@@ -30,7 +31,10 @@ actual class NetworkHandler(
 
     val gatewayMac = gatewayMacAddress()
     val realDevice = requireNotNull(
-        Pcap.lookupDev()
+        Pcap.findAllDevs().find { dev ->
+            dev.addresses.any { addr -> addr.family == PcapAddressFamily.INET4 } &&
+                dev.addresses.any { addr -> addr.family == PcapAddressFamily.MAC }
+        }
     ) {
         "Can't get PCAP device"
     }
@@ -55,7 +59,7 @@ actual class NetworkHandler(
                 val ethernetHeader = EthernetHeader.newInstance(packet, 0)
                 if (ethernetHeader.type != EtherType.IPv4) continue
                 if (ethernetHeader.dstAddress != realMac) continue
-                val ipPacket = IpV4Packet(packet, 0, ethernetHeader.length)
+                val ipPacket = IpV4Packet(packet, ethernetHeader.length, length)
                 launch(this@NetworkHandler.coroutineContext) {
                     ipHandler.handleRemote(ipPacket)
                 }
@@ -68,9 +72,10 @@ actual class NetworkHandler(
         while (isActive) {
             val length = virtualDevice.readPacket(buf)
             if (length > 0) {
-                val rawData = buf.copyOf(length)
-                val ipPacket = IpPacket.newInstance(rawData)
+                // TODO: set IFF_NO_PI for offset 0
+                val rawData = buf.copyOfRange(4, length)
                 launch(this@NetworkHandler.coroutineContext) {
+                    val ipPacket = IpPacket.newInstance(rawData)
                     ipHandler.handleLocal(ipPacket)
                 }
             }
@@ -79,12 +84,12 @@ actual class NetworkHandler(
     }
 
     fun configureRouting() {
-        system("ip tuntap add mode tun dev ${virtualDevice.name}")
-        system("ip address add 10.8.0.1/24 dev ${virtualDevice.name}")
-        system("ip link set dev ${virtualDevice.name} mtu ${virtualDevice.mtu}")
-        system("ip link set dev ${virtualDevice.name} up")
-        system("ip route add default via 10.8.0.2 dev ${virtualDevice.name}")
-        system("resolvectl dns ${virtualDevice.name} 8.8.8.8")
+        // for IPv4 macOS seems to require a device address and manual setup of the route
+        system("sudo /sbin/ifconfig ${virtualDevice.name} add $virtualAddress ${virtualAddress.changeBit(2)}")
+        system("sudo /sbin/ifconfig ${virtualDevice.name} up")
+        system("sudo /sbin/route -n add 0.0.0.0/1 $virtualAddress")
+        system("sudo /sbin/route -n add 128.0.0.0/1 $virtualAddress")
+        system("sudo networksetup -setdnsservers Wi-Fi 8.8.8.8")
     }
 
     actual fun send(packet: Packet) {
@@ -121,13 +126,28 @@ actual class NetworkHandler(
                 }
             }
         }.build()
-        virtualDevice.writePacket(ipPacket.rawData)
+        val rawData = ByteArray(ipPacket.length + 4)
+        rawData[3] = 0x02
+        ipPacket.toByteArray(rawData, 4)
+        virtualDevice.writePacket(rawData)
+    }
+
+    private fun gatewayMacAddress(): MacAddress {
+        val output = systemStr("arp \"\$(netstat -rn | grep 'default' | cut -d' ' -f13)\" | cut -d' ' -f4")
+        return MacAddress(output.replace("\n", "").split(':').map { it.toUByte(16) }.toUByteArray().toByteArray())
     }
 
     fun printNetworkAddresses() {
+        println(realDevice.addresses)
         println("Real IPv4    : $realAddress")
         println("Virtual IPv4 : $virtualAddress")
         println("Real MAC     : $realMac")
         println("Gateway MAC  : $gatewayMac")
+    }
+
+    private fun Inet4Address.changeBit(bit: Int): Inet4Address {
+        val bytes = toByteArray()
+        bytes[bytes.size - 1] = bytes[bytes.size - 1] xor (1 shl bit).toByte()
+        return Inet4Address(bytes)
     }
 }
