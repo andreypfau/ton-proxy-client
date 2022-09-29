@@ -23,14 +23,6 @@ fun lockFile(): File? {
 fun extractLib(dir: File): File {
     val libFileExt = if (NativePlatform.isWindows()) ".exe" else ".kexe"
     val libFile = File(dir, "ton-proxy-client-${AppVersion}$libFileExt")
-    if (libFile.exists()) return libFile
-    else {
-        dir.listFiles { _, name ->
-            name.endsWith(libFileExt)
-        }?.forEach {
-            it.delete()
-        }
-    }
     val loader = Thread.currentThread().contextClassLoader
     val resource = loader.getResource(libPath)
         ?: error("Can't find lib for OS: '${NativePlatform.os}', Arch: '${NativePlatform.arch}', Path: '$libPath'")
@@ -39,6 +31,7 @@ fun extractLib(dir: File): File {
             input.copyTo(output)
         }
     }
+    libFile.deleteOnExit()
     return libFile
 }
 

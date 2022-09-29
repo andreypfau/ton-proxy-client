@@ -35,7 +35,9 @@ class HttpHandler(
 
     companion object {
         val PROXY_LIST: List<InetSocketAddress> = listOf(
-            Inet4Address("164.92.157.214") to 8080u
+            Inet4Address("5.2.76.237") to 8080u,
+            Inet4Address("77.91.73.24") to 8080u,
+            Inet4Address("167.235.34.220") to 8080u
         )
         const val HTTP_PORT: UShort = 80u
 
