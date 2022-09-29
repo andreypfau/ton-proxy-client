@@ -8,22 +8,37 @@ plugins {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("io.ktor:ktor-client-core-jvm:2.1.1")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.1.1")
-    implementation("io.ktor:ktor-client-content-negotiation:2.1.1")
-    implementation("io.ktor:ktor-client-cio-jvm:2.1.1")
-    implementation("net.java.dev.jna:jna:5.12.1")
+}
+
+object NativePlatform {
+    val arch = System.getProperty("os.arch")
+    val os = System.getProperty("os.name")
+
+    fun isArm() = arch.startsWith("arm") || arch.startsWith("aarch")
+    fun isX64() = arch == "x86_64" || arch == "amd64"
+    fun isWindows() = os.startsWith("Windows")
+    fun isMac() = os.startsWith("Mac") || os.startsWith("Darwin")
+    fun isLinux() = os.startsWith("Linux")
+    fun getTarget(): String {
+        val os = when {
+            isWindows() -> "mingw"
+            isMac() -> "macos"
+            isLinux() -> "linux"
+            else -> NativePlatform.os
+        }
+        val arch = when {
+            isX64() -> "X64"
+            isArm() -> "Arm64"
+            else -> NativePlatform.arch
+        }
+        return "$os$arch"
+    }
 }
 
 val libProject = rootProject.project("ton-proxy-client-lib")
 
 tasks.jar {
-    from("../ton-proxy-client-lib/build/bin/") {
-        include("**/*.dylib")
-        include("**/*.so")
-        include("**/*.dll")
-    }
-    manifest.attributes.set("Main-Class", "MainKt")
+
 }
 
 tasks.shadowJar {
@@ -33,9 +48,11 @@ tasks.shadowJar {
                 it.moduleGroup.startsWith("net.java.dev")
         }
     }
-    from("../ton-proxy-client-lib/build/bin/") {
-        include("**/*.kexe")
-        include("**/*.exe")
+    val path = "../ton-proxy-client-lib/build/bin/${NativePlatform.getTarget()}/releaseExecutable/"
+    from(path) {
+        val extension = if (NativePlatform.isWindows()) ".exe" else ".kexe"
+        include("ton-proxy-client-lib$extension")
+        into(NativePlatform.getTarget())
     }
     manifest.attributes.set("Main-Class", "MainKt")
 }
@@ -55,13 +72,19 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "TON Proxy Client"
-            packageVersion = project.version.toString()
             modules = arrayListOf(
-                "java.base", "java.desktop", "java.logging"
+                "java.base", "java.desktop"
             )
+            copyright = "© 2022 TON Foundation"
             macOS {
-                iconFile.set(project.file("src/main/resources/ton_symbol.icns"))
-
+                iconFile.set(project.file("../assets/ton_symbol.icns"))
+                bundleID = "org.ton.proxy.client"
+                infoPlist {
+                    extraKeysRawXml = """
+                        <key>LSUIElement</key>
+                        <true/>
+                    """.trimIndent()
+                }
             }
         }
     }

@@ -1,7 +1,5 @@
-@file:Suppress("OPT_IN_USAGE")
-
-import com.sun.jna.Platform
 import org.ton.proxy.client.app.AppVersion
+import org.ton.proxy.client.app.NativePlatform
 import org.ton.proxy.client.app.application
 import org.ton.proxy.client.app.libPath
 import java.io.File
@@ -9,11 +7,7 @@ import java.io.File
 fun main() {
     val lockFile = lockFile() ?: return
     val libFile = extractLib(lockFile.parentFile)
-    val cmds = arrayOf(
-        "osascript", "-e", "do shell script \"chmod +x $libFile && $libFile $lockFile\" with administrator privileges"
-    )
-    println(cmds.joinToString(" "))
-    Runtime.getRuntime().exec(cmds)
+    runLib(libFile, lockFile)
     application()
 }
 
@@ -27,7 +21,7 @@ fun lockFile(): File? {
 }
 
 fun extractLib(dir: File): File {
-    val libFileExt = if (Platform.isWindows()) ".exe" else ".kexe"
+    val libFileExt = if (NativePlatform.isWindows()) ".exe" else ".kexe"
     val libFile = File(dir, "ton-proxy-client-${AppVersion}$libFileExt")
     if (libFile.exists()) return libFile
     else {
@@ -38,11 +32,26 @@ fun extractLib(dir: File): File {
         }
     }
     val loader = Thread.currentThread().contextClassLoader
-    val resource = loader.getResource(libPath)!!
+    val resource = loader.getResource(libPath)
+        ?: error("Can't find lib for OS: '${NativePlatform.os}', Arch: '${NativePlatform.arch}', Path: '$libPath'")
     resource.openStream().use { input ->
         libFile.outputStream().use { output ->
             input.copyTo(output)
         }
     }
     return libFile
+}
+
+fun runLib(libFile: File, lockFile: File) {
+    val cmd = when {
+        NativePlatform.isMac() -> arrayOf(
+            "osascript",
+            "-e",
+            "do shell script \"chmod +x $libFile && $libFile $lockFile\" with administrator privileges"
+        )
+
+        else -> emptyArray()
+    }
+    println("Run cmd: ${cmd.joinToString(" ")}")
+    Runtime.getRuntime().exec(cmd)
 }

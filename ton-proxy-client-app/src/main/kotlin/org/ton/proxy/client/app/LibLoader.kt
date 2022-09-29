@@ -1,21 +1,20 @@
 package org.ton.proxy.client.app
 
-import com.sun.jna.Platform
-
 val libPath: String = run {
-    val target = when {
-        Platform.isMac() -> {
-            if (Platform.isARM()) "macosArm64"
-            else "macosX64"
-        }
-
-        Platform.isWindows() -> "mingwX64"
-        Platform.isLinux() -> "linuxX64"
-        else -> "native"
+    val os = when {
+        NativePlatform.isWindows() -> "mingw"
+        NativePlatform.isMac() -> "macos"
+        NativePlatform.isLinux() -> "linux"
+        else -> NativePlatform.os
+    }
+    val arch = when {
+        NativePlatform.isX64() -> "X64"
+        NativePlatform.isArm() -> "Arm64"
+        else -> NativePlatform.arch
     }
     val extension = when {
-        Platform.isWindows() -> ".exe"
+        NativePlatform.isWindows() -> ".exe"
         else -> ".kexe"
     }
-    "$target/releaseExecutable/ton-proxy-client-lib$extension"
+    "$os$arch/ton-proxy-client-lib$extension"
 }
