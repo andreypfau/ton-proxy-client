@@ -46,7 +46,7 @@ tasks.shadowJar {
         }
     }
     val versionFile = project.file("build/tmp/version")
-    versionFile.createNewFile()
+    versionFile.parentFile.mkdirs()
     versionFile.writeText(project.version.toString())
     from(versionFile)
     val path = "../ton-proxy-client-lib/build/bin/${NativePlatform.getTarget()}/releaseExecutable/"
@@ -58,15 +58,17 @@ tasks.shadowJar {
     manifest.attributes.set("Main-Class", "MainKt")
 }
 
+val file = tasks.shadowJar.get().archiveFile
+
 compose.desktop {
     application {
         mainClass = "MainKt"
-
+        dependsOn(tasks.shadowJar.get())
         disableDefaultConfiguration()
         val ff = project.fileTree("build/libs/") {
             include("*.jar")
         }
-        mainJar.set(tasks.shadowJar.get().archiveFile)
+        mainJar.set(file)
         fromFiles(ff)
 
         nativeDistributions {
