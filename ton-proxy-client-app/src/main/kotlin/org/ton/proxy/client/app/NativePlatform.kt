@@ -9,4 +9,6 @@ object NativePlatform {
     fun isWindows() = os.startsWith("Windows")
     fun isMac() = os.startsWith("Mac") || os.startsWith("Darwin")
     fun isLinux() = os.startsWith("Linux")
+
+    override fun toString(): String = "$os $arch"
 }

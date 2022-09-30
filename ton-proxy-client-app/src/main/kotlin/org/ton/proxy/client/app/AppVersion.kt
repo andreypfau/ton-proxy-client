@@ -1,8 +1,9 @@
 package org.ton.proxy.client.app
 
 object AppVersion {
-    // TODO: take from gradle
-    const val VALUE = "1.0.0"
+    val VALUE = Thread.currentThread().contextClassLoader.getResource("version")
+        ?.readText()?.split("\n")?.firstOrNull()
+        ?: "UNKNOWN"
 
     override fun toString(): String = VALUE
 }

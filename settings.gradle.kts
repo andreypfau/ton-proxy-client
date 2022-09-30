@@ -11,3 +11,4 @@ pluginManagement {
 rootProject.name = "ton-proxy-client"
 include(":ton-proxy-client-app")
 include(":ton-proxy-client-lib")
+//include(":ton-proxy-client-wintun")

@@ -13,6 +13,7 @@ import com.github.andreypfau.kotlinio.packet.ip.IpProtocol
 import com.github.andreypfau.kotlinio.packet.ipv4.IpV4Packet
 import com.github.andreypfau.kotlinio.packet.transport.TransportBuilder
 import kotlinx.coroutines.*
+import kotlinx.datetime.Clock
 import org.ton.proxy.client.device.VirtualDevice
 import org.ton.proxy.client.utils.systemStr
 import pcap.Pcap
@@ -51,10 +52,15 @@ actual class NetworkHandler(
     val ipHandler = IpHandler(this)
     val pcapHandle = realDevice.openLive(Short.MAX_VALUE.toInt(), PcapPromiscousMode.PROMISCUOUS, 10)
     val receiveJob = launch(newSingleThreadContext("Receive")) {
+        println("Start receive job...")
         val buf = ByteArray(Short.MAX_VALUE.toInt())
+        var time = Clock.System.now()
+        var bytes = 0L
         while (isActive) {
+            val now = Clock.System.now()
             val length = pcapHandle.nextPacket(buf, 0, buf.size)
             if (length > 0) {
+                bytes += length
                 val packet = buf.copyOf(length)
                 val ethernetHeader = EthernetHeader.newInstance(packet, 0)
                 if (ethernetHeader.type != EtherType.IPv4) continue
@@ -64,14 +70,24 @@ actual class NetworkHandler(
                     ipHandler.handleRemote(ipPacket)
                 }
             }
+            if ((now - time).inWholeMilliseconds > 1000) {
+                println("RX: $bytes bytes/sec")
+                bytes = 0
+                time = now
+            }
             delay(1)
         }
     }
     val sendJob = launch(newSingleThreadContext("Send")) {
+        println("Start send job...")
         val buf = ByteArray(Short.MAX_VALUE.toInt())
+        var time = Clock.System.now()
+        var bytes = 0L
         while (isActive) {
-            val length = virtualDevice.readPacket(buf)
+            val now = Clock.System.now()
+            val length = virtualDevice.readPacket(buf, 0)
             if (length > 0) {
+                bytes += length
                 // TODO: set IFF_NO_PI for offset 0
                 val rawData = buf.copyOfRange(4, length)
                 launch(this@NetworkHandler.coroutineContext) {
@@ -79,17 +95,28 @@ actual class NetworkHandler(
                     ipHandler.handleLocal(ipPacket)
                 }
             }
+            if ((now - time).inWholeMilliseconds > 1000) {
+                println("TX: $bytes bytes/sec")
+                bytes = 0
+                time = now
+            }
             delay(1)
         }
     }
 
     fun configureRouting() {
         // for IPv4 macOS seems to require a device address and manual setup of the route
-        system("sudo /sbin/ifconfig ${virtualDevice.name} add $virtualAddress ${virtualAddress.changeBit(2)}")
-        system("sudo /sbin/ifconfig ${virtualDevice.name} up")
-        system("sudo /sbin/route -n add 0.0.0.0/1 $virtualAddress")
-        system("sudo /sbin/route -n add 128.0.0.0/1 $virtualAddress")
-        system("sudo networksetup -setdnsservers Wi-Fi 8.8.8.8")
+        runCmd("sudo /sbin/ifconfig ${virtualDevice.name} add $virtualAddress ${virtualAddress.changeBit(2)}")
+        runCmd("sudo /sbin/ifconfig ${virtualDevice.name} up")
+        runCmd("sudo /sbin/route -n add 0.0.0.0/1 $virtualAddress")
+        runCmd("sudo /sbin/route -n add 128.0.0.0/1 $virtualAddress")
+        runCmd("sudo networksetup -setdnsservers Wi-Fi 8.8.8.8")
+    }
+
+    fun runCmd(cmd: String) {
+        print(cmd)
+        val result = system(cmd)
+        print(" ... Result: $result\n")
     }
 
     actual fun send(packet: Packet) {
@@ -129,7 +156,7 @@ actual class NetworkHandler(
         val rawData = ByteArray(ipPacket.length + 4)
         rawData[3] = 0x02
         ipPacket.toByteArray(rawData, 4)
-        virtualDevice.writePacket(rawData)
+        virtualDevice.writePacket(rawData, 0)
     }
 
     private fun gatewayMacAddress(): MacAddress {

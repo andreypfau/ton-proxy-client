@@ -8,6 +8,7 @@ plugins {
 
 dependencies {
     implementation(compose.desktop.currentOs)
+    implementation("net.java.dev.jna:jna:5.12.1")
 }
 
 object NativePlatform {
@@ -35,11 +36,7 @@ object NativePlatform {
     }
 }
 
-val libProject = rootProject.project("ton-proxy-client-lib")
-
-tasks.jar {
-
-}
+val libProject = rootProject.project(":ton-proxy-client-lib")
 
 tasks.shadowJar {
     minimize {
@@ -48,6 +45,9 @@ tasks.shadowJar {
                 it.moduleGroup.startsWith("net.java.dev")
         }
     }
+    val versionFile = project.file("build/tmp/version")
+    versionFile.writeText(project.version.toString())
+    from(versionFile)
     val path = "../ton-proxy-client-lib/build/bin/${NativePlatform.getTarget()}/releaseExecutable/"
     from(path) {
         val extension = if (NativePlatform.isWindows()) ".exe" else ".kexe"
@@ -65,7 +65,6 @@ compose.desktop {
         val ff = project.fileTree("build/libs/") {
             include("*.jar")
         }
-        dependsOn(tasks.shadowJar.get())
         mainJar.set(tasks.shadowJar.get().archiveFile)
         fromFiles(ff)
 

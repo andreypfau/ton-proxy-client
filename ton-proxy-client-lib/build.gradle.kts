@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "1.7.20-RC"
+    kotlin("multiplatform") version "1.7.20"
 }
 
 kotlin {
@@ -62,7 +62,7 @@ kotlin {
             val macosMain by creating {
                 dependsOn(nativeMain)
             }
-            listOf(/*macosX64(),*/macosArm64()).forEach { target ->
+            listOf(macosX64(), macosArm64()).forEach { target ->
                 target.apply {
                     compilations.forEach {
                         it.defaultSourceSet {

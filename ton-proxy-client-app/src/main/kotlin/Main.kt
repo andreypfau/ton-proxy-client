@@ -43,7 +43,7 @@ fun runLib(libFile: File, lockFile: File) {
             "do shell script \"chmod +x $libFile && $libFile $lockFile\" with administrator privileges"
         )
 
-        else -> emptyArray()
+        else -> error("Unsupported platform: $NativePlatform")
     }
     println("Run cmd: ${cmd.joinToString(" ")}")
     Runtime.getRuntime().exec(cmd)
