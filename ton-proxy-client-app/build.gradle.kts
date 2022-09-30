@@ -46,6 +46,7 @@ tasks.shadowJar {
         }
     }
     val versionFile = project.file("build/tmp/version")
+    versionFile.createNewFile()
     versionFile.writeText(project.version.toString())
     from(versionFile)
     val path = "../ton-proxy-client-lib/build/bin/${NativePlatform.getTarget()}/releaseExecutable/"
