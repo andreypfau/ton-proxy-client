@@ -15,12 +15,9 @@
     ./build_macos.sh
     ```
 
-3. Open .DMG distributive locating in path:
-   `build/compose/binaries/main/dmg/TON Proxy Client-X.X.X.dmg`
+3. Copy file `TON Proxy Client.app` to `/Applications`
 
-4. Drag & Drop in `/Applications`
-
-5. Run & Enjoy visiting: [http://foundation.ton](http://foundation.ton)
+4. Run & Enjoy visiting: [http://foundation.ton](http://foundation.ton)
 
 ## Windows
 
