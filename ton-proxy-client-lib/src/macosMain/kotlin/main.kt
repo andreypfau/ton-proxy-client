@@ -1,3 +1,4 @@
+import com.github.andreypfau.kotlinio.address.Inet4Address
 import kotlinx.coroutines.*
 import org.ton.proxy.client.tonProxyClientStart
 import platform.posix.F_OK
@@ -18,5 +19,8 @@ fun main(args: Array<String>) = runBlocking {
             }
         }
     }
-    tonProxyClientStart()
+    tonProxyClientStart(
+        address = Inet4Address("10.8.0.1"),
+        dnsAddress = Inet4Address("1.1.1.1")
+    )
 }

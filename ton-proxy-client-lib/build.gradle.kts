@@ -15,15 +15,13 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:atomicfu:0.18.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.3-native-mt")
-                implementation("com.github.andreypfau:kotlin-io:1.0-SNAPSHOT")
+                implementation("com.github.andreypfau:kotlinio:1.0-SNAPSHOT")
+                implementation("com.github.andreypfau:pcap-kotlin:1.0-SNAPSHOT")
             }
         }
 
         val nativeMain by creating {
             dependsOn(commonMain)
-            dependencies {
-                implementation("com.github.andreypfau:pcap-kotlin:1.0-SNAPSHOT")
-            }
         }
 
         if (isLinux || allTarget) {
@@ -32,6 +30,10 @@ kotlin {
             }
             linuxX64 {
                 compilations.getByName("main") {
+                    sourceSets.getByName("main") {
+                        dependsOn(linuxMain)
+                        dependsOn(nativeMain)
+                    }
                     cinterops {
                         val tun by creating {
                             defFile(project.file("src/nativeInterop/cinterop/tun.def"))
@@ -51,12 +53,22 @@ kotlin {
             }
         }
 
-//        mingwX64()
-//        val mingwX64Main by getting
-//        val mingwMain by creating {
-//            dependsOn(commonMain)
-//            mingwX64Main.dependsOn(this)
-//        }
+        if (isMingw || allTarget) {
+            mingwX64 {
+                compilations.getByName("main") {
+                    defaultSourceSet {
+                        dependsOn(commonMain)
+                    }
+                    cinterops {
+                        val wintun by creating {
+                            defFile(project.file("src/nativeInterop/cinterop/wintun.def"))
+                            packageName("wintun")
+                            headers(project.file("src/nativeInterop/cinterop/wintun.h"))
+                        }
+                    }
+                }
+            }
+        }
 
         if (isMacos) {
             val macosMain by creating {

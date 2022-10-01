@@ -1,18 +1,17 @@
 package org.ton.proxy.client.device
 
-import os.File
-
-val VirtualDevice.Companion.DEFAULT_MTU: Int
-    get() = 1500
+import com.github.andreypfau.kotlinio.address.Inet4Address
+import com.github.andreypfau.kotlinio.address.MacAddress
 
 expect class VirtualDevice {
-    val file: File
-    val mtu: Int
     val name: String
-    fun readPacket(buf: ByteArray, offset: Int = 0): Int
-    fun writePacket(buf: ByteArray, offset: Int = 0): Int
-    fun flush()
+    val address: Inet4Address
+    val dnsAddress: Inet4Address
+    val gatewayMac: MacAddress
+    fun readPacket(packet: ByteArray, offset: Int = 0): Int
+    fun writePacket(packet: ByteArray, offset: Int = 0): Int
     fun close()
+    fun configureRouting()
 
     companion object
 }

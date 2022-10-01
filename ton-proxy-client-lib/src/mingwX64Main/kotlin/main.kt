@@ -1,9 +1,14 @@
 import com.github.andreypfau.kotlinio.address.Inet4Address
-import kotlinx.coroutines.runBlocking
-import org.ton.proxy.client.device.VirtualDevice
-import org.ton.proxy.client.handler.NetworkHandler
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import org.ton.proxy.client.tonProxyClientStart
+import platform.posix.F_OK
+import platform.posix.access
+import platform.posix.exit
 
-fun main() = runBlocking {
+fun main(args: Array<String>) {
     val lockFile = args.firstOrNull()
     if (lockFile != null) {
         GlobalScope.launch {

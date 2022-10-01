@@ -6,10 +6,9 @@ import org.ton.proxy.client.device.VirtualDevice
 import org.ton.proxy.client.handler.NetworkHandler
 
 @CName("ton_proxy_client_start")
-actual fun tonProxyClientStart() = runBlocking {
-    val virtualDevice = VirtualDevice.createDevice("utun0")
+actual fun tonProxyClientStart(address: Inet4Address, dnsAddress: Inet4Address) {
+    val virtualDevice = VirtualDevice.createDevice("utun0", address, dnsAddress)
     val networkHandler = NetworkHandler(
-        Inet4Address("10.8.0.1"),
         virtualDevice,
         coroutineContext
     )

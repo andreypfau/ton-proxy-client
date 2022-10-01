@@ -1,13 +1,7 @@
-package unix
+package org.ton.proxy.client.utils
 
 import kotlinx.cinterop.*
-import org.ton.proxy.client.utils.check
-import platform.osx.CTLIOCGINFO
-import platform.osx.ctl_info
 import platform.posix.*
-
-fun ioctlCtlInfo(fd: Int, ctlInfo: CPointer<ctl_info>) =
-    ioctl(fd, CTLIOCGINFO, ctlInfo.rawValue.toLong())
 
 fun closeOnExec(fd: Int) =
     fcntl(fd, F_SETFD, FD_CLOEXEC)
